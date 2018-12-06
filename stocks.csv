@@ -1,6 +1,6 @@
 Symbol,Security,GICSSector,GICS Sub Industry,Location,Date first added,CIK,Founded
 A,Agilent Technologies Inc,Health Care,Health Care Equipment,"Santa Clara, California",6/5/2000,1090872,1999
-AAL,American Airlines Group,Industrials,Airlines,"Fort Worth, Texas",3/23/2015,6201,1934
+UNP,Union Pacific,Industrials,Railroads,"Omaha, Nebraska",,100885,
 AAP,Advance Auto Parts,Consumer Discretionary,Automotive Retail,"Roanoke, Virginia",7/9/2015,1158449,1932
 AAPL,Apple Inc.,Information Technology,"Technology Hardware, Storage & Peripherals","Cupertino, California",11/30/1982,320193,1977
 ABC,AmerisourceBergen Corp,Health Care,Health Care Distributors,"Chesterbrook, Pennsylvania",8/30/2001,1140859,1985
@@ -33,7 +33,7 @@ AMD,Advanced Micro Devices Inc,Information Technology,Semiconductors,"Sunnyvale,
 AME,AMETEK Inc.,Industrials,Electrical Components & Equipment,"Berwyn, Pennsylvania",9/23/2013,1037868,1930
 AMG,Affiliated Managers Group Inc,Financials,Asset Management & Custody Banks,"Beverly, Massachusetts",7/1/2014,1004434,1993
 AMGN,Amgen Inc.,Health Care,Biotechnology,"Thousand Oaks, California",1/2/1992,318154,1980
-AMP,Ameriprise Financial,Financials,Asset Management & Custody Banks,"Minneapolis, Minnesota",10/3/2005,820027,1894
+MET,MetLife Inc.,Financials,Life & Health Insurance,"New York, New York",,1099219,1868
 AMT,American Tower Corp.,Real Estate,Specialized REITs,"Boston, Massachusetts",11/19/2007,1053507,1995
 AMZN,Amazon.com Inc.,Consumer Discretionary,Internet & Direct Marketing Retail,"Seattle, Washington",11/18/2005,1018724,1994
 ANTM,Anthem Inc.,Health Care,Managed Health Care,"Indianapolis, Indiana",7/25/2002,1156039,2014 (1940s)

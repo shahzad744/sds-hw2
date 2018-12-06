@@ -48,9 +48,54 @@ plot(logMatrix)
 # http://www.sthda.com/english/wiki/correlation-matrix-a-quick-start-guide-to-analyze-format-and-visualize-a-correlation-matrix-using-r-software
 
 # calculated the pearson correlation matrix
-pearson_correlation_matrix <- cor(logMatrix, method = "pearson", use = "complete.obs")
+pearson_correlation_matrix <- cor(logMatrix, method = "pearson", use = "everything")
 head(pearson_correlation_matrix) # outputing the rows
 save.image("main.RDaata")
 load("main.RDaata")
+R <- pearson_correlation_matrix
+R[is.na(R)] <- 0
 
+#Calculating bootstarp confidence interval
+
+B = 10000
+brep = rep(NA, B)
+set.seed(1213)  # for reproducibility
+for (b in 1:B){
+  idx = sample(1:(nrow(R)*ncol(R)), replace = T)
+  bsamp   = as.vector(R)[idx]        # bootstrap sample
+  btheta  = sqrt(nrow(R)*ncol(R))*max(bsamp-as.vector(R))   # bootstrap replicate
+  brep[b] = btheta            # save
+}
+
+Gstar<- ecdf(brep)
+plot(Gstar)
+# so inverse of ECDF of 0.95 would b 110 and Confidence intervals will be 110/ sqrt(n) = 1
+confidence <- 0.1
+matrix_apply <- function(m,ee,con) {
+  m2 <- m
+  for (r in seq(nrow(m2))){
+    for (c in seq(ncol(m2))){
+      l <- m[[r,c]]-con
+      h <- m[[r,c]]+con
+      eel <- ee*-1
+      eeh <- ee
+      #print(c(h,l,eeh,eel))
+      if(h < eel || l > eeh){
+        m2[[r,c]]<-1
+      }
+      else{
+        m2[[r,c]]<-0
+      }
+    }
+  }
+  
+  return(m2)
+}
+ee<-0.2
+m<- matrix_apply(R,ee,confidence)
+plot(simplify(graph_from_incidence_matrix(m)))
+for( i in 1:20){
+  
+
+} 
 
