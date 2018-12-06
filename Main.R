@@ -1,5 +1,4 @@
 require(tseries, quietly = TRUE)
-library("ggpubr")
 stock <- read.csv("stocks.csv")
 symbols <- stock[["Symbol"]]
 data <- NULL
@@ -17,14 +16,6 @@ colnames(cMatrix) <- symbols
 cMatrix[is.na(cMatrix)] <- 0
 logMatrix <- diff(log(cMatrix))
 logMatrix[is.na(logMatrix)] <- 0
-plot(logMatrix)
-
-#saving the data into RDS object 
-
-saveRDS(logMatrix,file="x_matrix.rds")
-
-# getting the matrix from rds object 
-logMatrix<- readRDS(file="x_matrix.rds")
 plot(logMatrix)
 
 #install.packages("ggpubr")
@@ -47,6 +38,14 @@ plot(logMatrix)
 
 # http://www.sthda.com/english/wiki/correlation-matrix-a-quick-start-guide-to-analyze-format-and-visualize-a-correlation-matrix-using-r-software
 
+#saving the data into RDS object
+
+saveRDS(logMatrix,file="x_matrix.rds")
+
+# getting the matrix from rds object
+logMatrix<- readRDS(file="x_matrix.rds")
+plot(logMatrix)
+
 # calculated the pearson correlation matrix
 pearson_correlation_matrix <- cor(logMatrix, method = "pearson", use = "everything")
 head(pearson_correlation_matrix) # outputing the rows
@@ -57,20 +56,21 @@ R[is.na(R)] <- 0
 
 #Calculating bootstarp confidence interval
 
-B = 10000
+B = 1000
 brep = rep(NA, B)
-set.seed(1213)  # for reproducibility
 for (b in 1:B){
-  idx = sample(1:(nrow(R)*ncol(R)), replace = T)
-  bsamp   = as.vector(R)[idx]        # bootstrap sample
-  btheta  = sqrt(nrow(R)*ncol(R))*max(bsamp-as.vector(R))   # bootstrap replicate
-  brep[b] = btheta            # save
+  row_idx <- sample(1:nrow(logMatrix), replace = T)
+  bSample <- logMatrix[row_idx,]# bootstrap sample
+  rownames(bSample) <- rownames(logMatrix)
+  sample_Cor <- cor(bSample, method = "pearson", use = "everything")
+  sample_Cor[is.na(sample_Cor)] <- 0
+  btheta  <- sqrt(nrow(logMatrix))*max(sample_Cor-R)   # bootstrap replicate
+  brep[b] <- btheta            # save
 }
 
 Gstar<- ecdf(brep)
 plot(Gstar)
-# so inverse of ECDF of 0.95 would b 110 and Confidence intervals will be 110/ sqrt(n) = 1
-confidence <- 0.1
+confidence <- as.numeric(quantile(brep,0.95)/sqrt(nrow(logMatrix)))
 matrix_apply <- function(m,ee,con) {
   m2 <- m
   for (r in seq(nrow(m2))){
@@ -80,7 +80,7 @@ matrix_apply <- function(m,ee,con) {
       eel <- ee*-1
       eeh <- ee
       #print(c(h,l,eeh,eel))
-      if(h < eel || l > eeh){
+      if(h <= eel || l >= eeh){
         m2[[r,c]]<-1
       }
       else{
@@ -91,11 +91,23 @@ matrix_apply <- function(m,ee,con) {
   
   return(m2)
 }
-ee<-0.2
+
+color_graph <- function(graph,stock){
+  sectors <- unique(stock$GICSSector)
+  colors <- rainbow(length(sectors))
+  for( node in V(g)){
+    node$name
+  }
+  V(g)$color<-"green"
+  V(g)$name
+  return (g)
+}
+ee<-0
 m<- matrix_apply(R,ee,confidence)
-plot(simplify(graph_from_incidence_matrix(m)))
+g<-simplify(graph_from_adjacency_matrix(m,diag = FALSE,mode = "undirected"))
+plot(color_graph(g,stock))
 for( i in 1:20){
   
 
-} 
+}
 
