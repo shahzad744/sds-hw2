@@ -1,4 +1,6 @@
 require(tseries, quietly = TRUE)
+require(igraph)
+require(energy)
 stock <- read.csv("stocks_short.csv")
 symbols <- stock[["Symbol"]]
 data <- NULL
@@ -18,9 +20,7 @@ logMatrix <- diff(log(cMatrix))
 logMatrix[is.na(logMatrix)] <- 0
 plot(logMatrix)
 cor_mat <- matrix(1:ncol(logMatrix)**2,nrow=ncol(logMatrix),dimnames=list(colnames(logMatrix),colnames(logMatrix)))
-save.image("Q2.RData")
 require(energy)
-load("Q2.RData")
 logMatrix[is.na(logMatrix)] <- 0
 logMatrix[is.infinite(logMatrix)] <- 0
 alpha <- 0.05
@@ -28,11 +28,11 @@ for(i in seq(nrow(cor_mat))){
   for(j in seq(ncol(cor_mat))){
     X <- logMatrix[,i]
     Y <- logMatrix[,j]
-    dd <- dcov.test(X,Y,index=0.01,R=1000)
+    dd <- dcov.test(X,Y,index=0.01,R=100)
     cor_mat[i,j] <- dd$p.value
   }
 }
-save.image("Q2.RData")
+
 matrix_apply <- function(m,alpha) {
   m2 <- m
   for (r in seq(nrow(m2))){
