@@ -21,6 +21,8 @@ require(tseries, warn.conflicts=F, quietly = TRUE)
 require(igraph, warn.conflicts=F, quietly = TRUE)
 require(lemon,warn.conflicts=F, quietly = TRUE)
 require(GGally,warn.conflicts=F, quietly = TRUE)
+require(energy,warn.conflicts=F, quietly = TRUE)
+require(randomcoloR,warn.conflicts=F, quietly = TRUE)
 ```
 
 After that we just read the csv file which have rows. We have showed the rows that it contains. We also have to use the lemon library to pretty print the dataframe values.
@@ -39,10 +41,10 @@ options("getSymbols.yahoo.warning"=FALSE)
 options("getSymbols.warning4.0"=FALSE)
 for (row in symbols) {
   if (is.null(data)) {
-    data <- suppressWarnings(get.hist.quote(instrument = row, start = "2013-01-01", end = "2018-01-01", quote = "Close", provider = "yahoo", drop = TRUE))
+    data <- suppressWarnings(get.hist.quote(instrument = row, start = "2003-01-01", end = "2008-01-01", quote = "Close", provider = "yahoo", drop = TRUE))
   }
   else {
-    temp <- suppressWarnings(get.hist.quote(instrument = row, start = "2013-01-01", end = "2018-01-01", quote = "Close", provider = "yahoo", drop = TRUE))
+    temp <- suppressWarnings(get.hist.quote(instrument = row, start = "2003-01-01", end = "2008-01-01", quote = "Close", provider = "yahoo", drop = TRUE))
     data <- cbind(data, temp)
   }
 }
@@ -165,7 +167,6 @@ color_graph <- function(graph,stocks,sectors,colors){
 
 Lets plot the graph after using above function for coloring. 
 ```{r}
-library(randomcoloR)
 ee <- 0.13
 sectors <- unique(stock$GICSSector) # getting GICS 
 colors <- distinctColorPalette(length(sectors))  # getting colors based on GICS 
@@ -191,11 +192,410 @@ g<-simplify(graph_from_adjacency_matrix(m,diag = FALSE,mode = "undirected"))
 title = paste("Error: ",ee," and Confidence Level: ",round(0.95,2),sep = "")
 plot(color_graph(g,stock,sectors,colors) ,main="")
 title(main =title,  line = 0.5, cex.main = 0.4)
-legend("bottomleft", legend= sectors  , col = colors , bty = "n", pch=20 , pt.cex = 0.7, cex = 0.35, text.col=colors , horiz = FALSE, inset = c(0.1, 0.1))
 }
 ```
 
-From above you can see that our confidence value wa 0.18  and as we increase our error value from 0.02 to 0.42 stocks from same GICS started spreading instead of merging on same clustor. But still you can see that stocks from same GICS always clustered togather this proves our hypothesis. 
+From above you can see that our confidence value wa 0.18  and as we increase our error value from 0.10 to 0.37 stocks from same GICS started spreading instead of merging on same clustor. But still you can see that stocks from same GICS always clustered togather this proves our hypothesis. 
+
+<b>Now Lets move to Point 4. </b>
+
+#### Point 4: Again with the data in X, we now want to build a marginal correlation graph based on γ2, the distance covariance (seethe Appendix in our notes). This time we don’t have a confidence interval available, hence we will simply go for amultiple hypothesis testing (with and without Bonferroni correction) placing an edge {j, k} between stock j and stock k if and only if we reject the null hypothesis that γ2 = 0. Use the functions in the package energy to perform these tests, i,j then build and visualize the graph commenting on the results.
+
+To start working on this we need to decrease number of stocks otherwise the result are not statisfactory and the plot we have is not clustored togather. 
+
+-> We have decrease the size of the stocks, considering only 4 stocks from each category. 
+
+```{r echo=T, results='hide'}
+options("getSymbols.yahoo.warning"=FALSE)
+options("getSymbols.warning4.0"=FALSE)
+stock <- read.csv("stocks_short.csv")
+symbols <- stock[["Symbol"]]
+
+data <- NULL
+for (row in symbols) {
+  if (is.null(data)) {
+    data <- suppressWarnings(get.hist.quote(instrument = row, start = "2003-01-01", end = "2008-01-01", quote = "Close", provider = "yahoo", drop = TRUE))
+  }
+  else {
+    temp <- suppressWarnings(get.hist.quote(instrument = row, start = "2003-01-01", end = "2008-01-01", quote = "Close", provider = "yahoo", drop = TRUE))
+    data <- cbind(data, temp)
+  }
+}
+cMatrix <- as.matrix(data)
+colnames(cMatrix) <- symbols
+cMatrix[is.na(cMatrix)] <- 0
+logMatrix <- diff(log(cMatrix))
+logMatrix[is.na(logMatrix)] <- 0
+plot(logMatrix)
+```
+
+Above steps are the same for creating our Matrix X. I have just changed the CSV file to have only 34 companies names instead of 110 as I have did before. 
+
+```{r, eval=F, echo=T}
+# created empty correlation matrix 
+cor_mat <- matrix(1:ncol(logMatrix)**2,nrow=ncol(logMatrix),dimnames=list(colnames(logMatrix),colnames(logMatrix)))
+logMatrix[is.na(logMatrix)] <- 0 # na values 
+logMatrix[is.infinite(logMatrix)] <- 0 # removing infinite values.
+alpha <- 0.05 # considering alpha directly instead of calculating it from confidence level
+for(i in seq(nrow(cor_mat))){
+  for(j in seq(ncol(cor_mat))){
+    X <- logMatrix[,i]
+    Y <- logMatrix[,j]
+    dd <- dcov.test(X,Y,index=0.01,R=100) # this test will give us distance covariance value. This will do all the testing as behind the scene as described in class
+    cor_mat[i,j] <- dd$p.value
+  }
+}
+
+```
+
+After above code will run we will have cor_mat which contains our desired values. But it takes around 2 hours to run. So we have already saved it to <b>Q2Final.RData</b> file which has already that matrix. 
+
+```{r}
+load("Q2Final.RData")
+```
+
+For plotting we need again the matrix_apply function for getting edges for following this condition on matrix each value "if and only if we reject the null hypothesis that γ2 = 0.". So 
+
+```{r}
+matrix_apply_alpha <- function(m,alpha) {
+  m2 <- m
+  for (r in seq(nrow(m2))){
+    for (c in seq(ncol(m2))){
+      val <- m[[r,c]]
+      if(val>=alpha){
+        m2[[r,c]]<-1
+      }
+      else{
+        m2[[r,c]]<-0
+      }
+    }
+  }
+  
+  return(m2)
+}
+
+color_graph <- function(graph,stocks,sectors,colors){
+  for(i in 1:nrow(stocks)) {
+    row <- stocks[i,]
+    
+    #assigning the colors
+    for(j in 1:length(sectors)) {
+      if(sectors[j] == row$GICSSector){
+        V(graph)[i]$color <- colors[j] # assigning color to each stock but assign same color which are in same sector
+        break
+      }
+    }
+  }
+  return (graph)
+}
+```
+
+```{r}
+sectors <- unique(stock$GICSSector) # getting GICS 
+colors <- distinctColorPalette(length(sectors))  # getting colors based on GICS 
+m <- matrix_apply_alpha(cor_mat,alpha)
+g<-simplify(graph_from_adjacency_matrix(m,diag = FALSE,mode = "undirected"))
+plot(color_graph(g,stock,sectors,colors) ,main="")
+title(main ="Marginal Correlation Graph",  line = 0.5, cex.main = 0.4)
+```
+
+Finally, we have all the things we need. Lets move to point 5. 
+
+####Finally, if possible using the same portfolio of stocks, grab data from January 1, 2013 through January 1, 2018. Build the new matrix Y = 􏰀yt,j􏰁 and repeat the previous analysis commenting on observed differences between the two t,j time-frames.
+
+Now, for this part we have focused on collecting the data from January 1, 2013 through January 1, 2018. 
+
+This makes us total of 110 companies categorized into 11 Global Industry Classification Standard (GICS). 
+
+#### <span>Point 2: Select a sensible portfolio of stocks and take data from January 1, 2013 through January 1, 2018, before the onset of the “financial crisis”. Build the data matrix X </span>
+
+```{r echo=T, results='hide'}
+stock <- read.csv("stocks.csv")
+symbols <- stock[["Symbol"]]
+data <- NULL
+options("getSymbols.yahoo.warning"=FALSE)
+options("getSymbols.warning4.0"=FALSE)
+for (row in symbols) {
+  if (is.null(data)) {
+    data <- suppressWarnings(get.hist.quote(instrument = row, start = "2013-01-01", end = "2018-01-01", quote = "Close", provider = "yahoo", drop = TRUE))
+  }
+  else {
+    temp <- suppressWarnings(get.hist.quote(instrument = row, start = "2013-01-01", end = "2018-01-01", quote = "Close", provider = "yahoo", drop = TRUE))
+    data <- cbind(data, temp)
+  }
+}
+cMatrix <- as.matrix(data)
+```
+
+After downloading the data in <b>cMatrix</b> we have to assign the names to columns and we have to remove the <b>na</b> values and <b>infinite</b> values. We are replacing them with 0 instead of removing the whole row. For getting required <b> X </b> matrix we also have to use <i>diff</i> and <i>log</i>  formula on our matrix. I will be outputing its first few rows and columns using kable function. 
+
+```{r}
+cMatrix <- as.matrix(data)
+colnames(cMatrix) <- symbols
+cMatrix[is.na(cMatrix)] <- 0
+logMatrix <- diff(log(cMatrix))
+logMatrix[is.na(logMatrix)] <- 0
+logMatrix[is.infinite(logMatrix)] <- 0
+knitr::kable(head(logMatrix[,1:20],6), format="markdown")
+```
+
+After that we plotted <b>logMatrix</b> which will be our required X matrix. 
+```{r}
+plot(logMatrix)
+```
+
+<b>Comparison:</b> If we look at result of this matrix you can clearly see that it x-axis is between -0.05 to 0.05. In new matrix, we values are more desprerse on X-axis and previous data values are more despersed in Y-axis. but both of the graph are concenterated over 0. 
 
 
+Above completes point <b>2</b> part of the homework in <b>Your Job</b> section for data 20013 to 2018 
+
+Lets move to point <b>3</b>. 
+
+##### <span> Point 3: With this data, consider the usual Pearson correlation coefficient between stocks, and implement the bootstrap procedure described at page 3 of our notes to build marginal correlation graphs. In particular, visualize the dynamic of the graph as ε varies, highlighting the gics sectors with annotation/node color. Draw some conclusion: is there any statistical evidence to support the claim that stocks from the same sector cluster together? Explain.</b>
+
+
+For this we have to calculate Pearson correlation coefficient between stocks. For this we have to simply use <b>cor</b> function. 
+
+```{r}
+pearson_correlation_matrix <- cor(logMatrix, method = "pearson", use = "everything")
+R <- pearson_correlation_matrix
+R[is.na(R)] <- 0
+knitr::kable(head(R[,1:20],6), format="markdown") # outputing the rows
+```
+From above we can see that columns and rows that have same value have higher dependency on each other usaully 1 as you can see the first row and first column value of "A" company. 
+
+Now <b>Comparison: </b> If we compare this matrix values to previous ones we can say that values are almost in .1 difference. So one can conlude that some of the companies values decreased and for some it is increase. Just by looking at Pearson Correlation values for each stock. 
+
+Lets move to calculating <b>Marginal Correlation Graphs.</b>. But first we have to calculating the bootstrap confidence interval for this we have used our own algorithm instead of using Boot function. 
+
+```{r}
+#Calculating bootstarp confidence interval
+B = 1000 # considering only 1000 iteration for sampling purposes
+brep = rep(NA, B)
+for (b in 1:B){
+  row_idx <- sample(1:nrow(logMatrix), replace = T)
+  bSample <- logMatrix[row_idx,] # bootstrap sample
+  rownames(bSample) <- rownames(logMatrix)
+  sample_Cor <- cor(bSample, method = "pearson", use = "everything") # getting correlation from original matrix for sample
+  sample_Cor[is.na(sample_Cor)] <- 0 # replacing values 
+  btheta  <- sqrt(nrow(logMatrix))*max(sample_Cor-R)   # bootstrap replicate
+  brep[b] <- btheta            # save
+}
+```
+
+After above we have our bootstrapped replicated values. Till now we have ∆b  After we will calculate the our Emperical CDF. 
+
+```{r}
+Gstar<- ecdf(brep)
+plot(Gstar)
+```
+
+From above you can see that values graph changes between 0 to 1. 
+<b> Comparison: </b> Look like both of line graph is almost the same. 
+
+Now I have <b>Fn(t) hat</b>. I am going to move <b>t alpha</b> based on 0.95 confidence. 
+
+```{r}
+confidence <- as.numeric(quantile(brep,0.95)/sqrt(nrow(logMatrix)))
+confidence
+```
+
+
+
+From above you can notice that its value is 0.18.
+
+<b>Comparison:</b> Almost same value we compare both confidence values then 0.1827636 previous value and 0.1849653 is current one. 
+
+Lets move to building P􏰂R[j,k]∈Cj,k(α) for all (j,k)􏰃 →n 1−α for this We needed to build new metrix based on this condition <b>"If we have a confidence interval Cn,α then we can put an edge whenever [−ε, +ε] ∩ Cn,α = ∅." </b>
+
+We wrote function which will create matrix for edges which is based on our confidence interval and error as <b> ee = 0.1</b> 
+
+```{r}
+matrix_apply <- function(m,ee,con) {
+  m2 <- m
+  for (r in seq(nrow(m2))){
+    for (c in seq(ncol(m2))){
+      l <- m[[r,c]]-con
+      h <- m[[r,c]]+con
+      eel <- ee*-1
+      eeh <- ee
+      if(h <= eel || l >= eeh){
+        m2[[r,c]]<-1
+      }
+      else{
+        m2[[r,c]]<-0
+      }
+    }
+  }
+  return(m2)
+}
+
+ee<-0.13
+m<-matrix_apply(R,ee,confidence)
+knitr::kable(head(m[,1:10],6), format="markdown") 
+```
+
+<b>Comparison: </b> No significant difference found in values. Although we will can notice that few values for edges changed. 
+
+From above we have 1 in the matrix when edge is possible and 0 otherwise. Moving to creating a graph from adjacency matrix as <b>m </b> and simplify it if there are some stocks which points to itself. But before doing I need a function which will color the stocks which has same <b> GICS </b>. 
+
+```{r}
+color_graph <- function(graph,stocks,sectors,colors){
+  for(i in 1:nrow(stocks)) {
+    row <- stocks[i,]
+    
+    #assigning the colors
+    for(j in 1:length(sectors)) {
+      if(sectors[j] == row$GICSSector){
+        V(graph)[i]$color <- colors[j] # assigning color to each stock but assign same color which are in same sector
+        break
+      }
+    }
+  }
+  return (graph)
+}
+```
+
+Lets plot the graph after using above function for coloring. 
+```{r}
+ee <- 0.13
+sectors <- unique(stock$GICSSector) # getting GICS 
+colors <- distinctColorPalette(length(sectors))  # getting colors based on GICS 
+m <- matrix_apply(R,ee,confidence)
+g<-simplify(graph_from_adjacency_matrix(m,diag = FALSE,mode = "undirected"))
+plot(color_graph(g,stock,sectors,colors))
+legend("bottomleft", legend= sectors  , col = colors , bty = "n", pch=20 , pt.cex = 0.7, cex = 0.35, text.col=colors , horiz = FALSE, inset = c(0.1, 0.1))
+```
+
+
+From above you can see that with error 0.13 we get the perfect result of what we have wanted to support our claim that <b style="color:red">"stocks from the same sector cluster together"</b>. To support this claim we have drawn the graph containing unique color for stocks that are in the same <b>GICS</b>
+
+<b>Comparison</b> For previous years some companies are more despersed then current years from 2013 to 1018. You can clearly see onlt BBY and CM was out from the clustor but previously we had severals like CMG, AGN etc. 
+
+We will going to run this with different error values to see what will happen to our stocks when we increase error value <b>ee</b>
+
+
+```{r}
+eeee<- 0.1
+for( i in 1:10){
+ee <-ee + 0.02
+m<- matrix_apply(R,ee,confidence)
+g<-simplify(graph_from_adjacency_matrix(m,diag = FALSE,mode = "undirected"))
+title = paste("Error: ",ee," and Confidence Level: ",round(0.95,2),sep = "")
+plot(color_graph(g,stock,sectors,colors) ,main="")
+title(main =title,  line = 0.5, cex.main = 0.4)
+}
+```
+
+From above you can see that our confidence value wa 0.18  and as we increase our error value from 0.10 to 0.37 stocks from same GICS started spreading instead of merging on same clustor. But still you can see that stocks from same GICS always clustered togather this proves our hypothesis. 
+
+<b>Comparison:</b> If we compare graphs and values initially for 2013 to 2018 stock values are more dependent and clustored togather than 2003 to 2008 stocks values. 
+
+<b>Now Lets move to Point 4. </b>
+
+#### Point 4: Again with the data in X, we now want to build a marginal correlation graph based on γ2, the distance covariance (seethe Appendix in our notes). This time we don’t have a confidence interval available, hence we will simply go for amultiple hypothesis testing (with and without Bonferroni correction) placing an edge {j, k} between stock j and stock k if and only if we reject the null hypothesis that γ2 = 0. Use the functions in the package energy to perform these tests, i,j then build and visualize the graph commenting on the results.
+
+To start working on this we need to decrease number of stocks otherwise the result are not statisfactory and the plot we have is not clustored togather. 
+
+-> We have decrease the size of the stocks, considering only 4 stocks from each category. 
+
+```{r echo=T, results='hide'}
+options("getSymbols.yahoo.warning"=FALSE)
+options("getSymbols.warning4.0"=FALSE)
+stock <- read.csv("stocks_short.csv")
+symbols <- stock[["Symbol"]]
+
+data <- NULL
+for (row in symbols) {
+  if (is.null(data)) {
+    data <- suppressWarnings(get.hist.quote(instrument = row, start = "2003-01-01", end = "2008-01-01", quote = "Close", provider = "yahoo", drop = TRUE))
+  }
+  else {
+    temp <- suppressWarnings(get.hist.quote(instrument = row, start = "2003-01-01", end = "2008-01-01", quote = "Close", provider = "yahoo", drop = TRUE))
+    data <- cbind(data, temp)
+  }
+}
+cMatrix <- as.matrix(data)
+colnames(cMatrix) <- symbols
+cMatrix[is.na(cMatrix)] <- 0
+logMatrix <- diff(log(cMatrix))
+logMatrix[is.na(logMatrix)] <- 0
+plot(logMatrix)
+```
+
+Above steps are the same for creating our Matrix X. I have just changed the CSV file to have only 34 companies names instead of 110 as I have did before. 
+
+```{r, eval=F, echo=T}
+# created empty correlation matrix 
+cor_mat <- matrix(1:ncol(logMatrix)**2,nrow=ncol(logMatrix),dimnames=list(colnames(logMatrix),colnames(logMatrix)))
+logMatrix[is.na(logMatrix)] <- 0 # na values 
+logMatrix[is.infinite(logMatrix)] <- 0 # removing infinite values.
+alpha <- 0.05 # considering alpha directly instead of calculating it from confidence level
+for(i in seq(nrow(cor_mat))){
+  for(j in seq(ncol(cor_mat))){
+    X <- logMatrix[,i]
+    Y <- logMatrix[,j]
+    dd <- dcov.test(X,Y,index=0.01,R=100) # this test will give us distance covariance value. This will do all the testing as behind the scene as described in class
+    cor_mat[i,j] <- dd$p.value
+  }
+}
+
+```
+
+After above code will run we will have cor_mat which contains our desired values. But it takes around 2 hours to run. So we have already saved it to <b>Q2Final.RData</b> file which has already that matrix. 
+
+```{r}
+load("Q2Final.RData")
+```
+
+For plotting we need again the matrix_apply function for getting edges for following this condition on matrix each value "if and only if we reject the null hypothesis that γ2 = 0.". So 
+
+```{r}
+matrix_apply_alpha <- function(m,alpha) {
+  m2 <- m
+  for (r in seq(nrow(m2))){
+    for (c in seq(ncol(m2))){
+      val <- m[[r,c]]
+      if(val>=alpha){
+        m2[[r,c]]<-1
+      }
+      else{
+        m2[[r,c]]<-0
+      }
+    }
+  }
+  
+  return(m2)
+}
+color_graph <- function(graph,stocks,sectors,colors){
+  for(i in 1:nrow(stocks)) {
+    row <- stocks[i,]
+    
+    #assigning the colors
+    for(j in 1:length(sectors)) {
+      if(sectors[j] == row$GICSSector){
+        V(graph)[i]$color <- colors[j] # assigning color to each stock but assign same color which are in same sector
+        break
+      }
+    }
+  }
+  return (graph)
+}
+```
+
+```{r}
+sectors <- unique(stock$GICSSector) # getting GICS 
+colors <- distinctColorPalette(length(sectors))  # getting colors based on GICS 
+m <- matrix_apply_alpha(cor_mat,alpha)
+g<-simplify(graph_from_adjacency_matrix(m,diag = FALSE,mode = "undirected"))
+plot(color_graph(g,stock,sectors,colors) ,main="")
+title(main ="Marginal Correlation Graph",  line = 0.5, cex.main = 0.4)
+```
+
+Finally, we have all the things we need. Lets move to point 5.
+
+
+```{r, include=FALSE}
+save.image("Q2Final.RData")
+```
 
