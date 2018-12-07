@@ -1,4 +1,5 @@
 require(tseries, quietly = TRUE)
+require(igraph)
 stock <- read.csv("stocks.csv")
 symbols <- stock[["Symbol"]]
 data <- NULL
@@ -55,12 +56,11 @@ R <- pearson_correlation_matrix
 R[is.na(R)] <- 0
 
 #Calculating bootstarp confidence interval
-
-B = 1000
+B = 100
 brep = rep(NA, B)
 for (b in 1:B){
   row_idx <- sample(1:nrow(logMatrix), replace = T)
-  bSample <- logMatrix[row_idx,]# bootstrap sample
+  bSample <- logMatrix[row_idx,] # bootstrap sample
   rownames(bSample) <- rownames(logMatrix)
   sample_Cor <- cor(bSample, method = "pearson", use = "everything")
   sample_Cor[is.na(sample_Cor)] <- 0
@@ -79,7 +79,6 @@ matrix_apply <- function(m,ee,con) {
       h <- m[[r,c]]+con
       eel <- ee*-1
       eeh <- ee
-      #print(c(h,l,eeh,eel))
       if(h <= eel || l >= eeh){
         m2[[r,c]]<-1
       }
@@ -88,24 +87,31 @@ matrix_apply <- function(m,ee,con) {
       }
     }
   }
-  
   return(m2)
 }
 
-color_graph <- function(graph,stock){
-  sectors <- unique(stock$GICSSector)
+color_graph <- function(graph,stocks){
+  sectors <- unique(stocks$GICSSector)
   colors <- rainbow(length(sectors))
-  for( node in V(g)){
-    node$name
+
+  for(i in 1:nrow(stocks)) {
+    row <- stocks[i,]
+    
+    #assigning the colors
+    for(j in 1:length(sectors)) {
+      if(sectors[j] == row$GICSSector){
+        V(graph)[i]$color <- colors[j]
+        break
+      }
+    }
   }
-  V(g)$color<-"green"
-  V(g)$name
-  return (g)
+  return (graph)
 }
-ee<-0
+ee<- 0.13
 m<- matrix_apply(R,ee,confidence)
 g<-simplify(graph_from_adjacency_matrix(m,diag = FALSE,mode = "undirected"))
 plot(color_graph(g,stock))
+
 for( i in 1:20){
   
 
