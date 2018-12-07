@@ -4,12 +4,12 @@ output: html_document
 ---
 ##<span style="color:Green">Group Names</span>
 
-#### <span style="color:gray"> 1. SHAHZAD AMIN  </span>
-#### <span style="color:gray"> 2. HAFIZ MUHAMMAD HASSAN </span>
+#### <span style="color:gray"> 1. SHAHZAD AMIN - 1871077  </span>
+#### <span style="color:gray"> 2. HAFIZ MUHAMMAD HASSAN - 1873829 </span>
 
 ## Topic: Stock, Dependency and Graphs
 
-To start working on the homework we have download the stocks data. For this we have first created the CSV file named as <b> stocks.csv </b> which simply contains the names of the comapnies for those we have to collect the data. To do this we have also focused on collecting the 10 companies data in each category discussed in homework description. We have also noticed that instead of 10 categories there are 11 categories. Also for this part we have focused on collecting the data from January 1, 2003 through January 1, 2008. 
+To start working on the homework we have to download stocks data. For this we have first created the CSV file named as <b> stocks.csv </b> which simply contains the names of the comapnies for which we have to collect data. To do this we have also focused on collecting the 10 companies data in each category discussed in homework description. We have also noticed that instead of 10 categories there are 11 categories. Also for this part we have focused on collecting the data from January 1, 2003 through January 1, 2008. 
 
 This makes us total of 110 companies categorized into 11 Global Industry Classification Standard (GICS). 
 
@@ -23,13 +23,13 @@ require(lemon,warn.conflicts=F, quietly = TRUE)
 require(GGally,warn.conflicts=F, quietly = TRUE)
 ```
 
-After that I will just read the csv file which will have rows. I will show rows that it contains. I also have to use the lemon library to pretty print the dataframe values.
+After that we just read the csv file which have rows. We have showed the rows that it contains. We also have to use the lemon library to pretty print the dataframe values.
 
 ```{r}
 stock <- read.csv("stocks.csv")
 knitr::kable(head(stock), format="markdown")
 ```
-From above we can see that <b>Symbol</b> column contains the companies name and <b>GICSSector</b> contains the category. Now I will download the data from January 1, 2003 through January 1, 2008.  
+From above we can see that <b>Symbol</b> column contains the companies name and <b>GICSSector</b> contains the category. After that we have downloaded data from January 1, 2003 through January 1, 2008.  
 
 
 ```{r echo=T, results='hide'}
@@ -39,17 +39,17 @@ options("getSymbols.yahoo.warning"=FALSE)
 options("getSymbols.warning4.0"=FALSE)
 for (row in symbols) {
   if (is.null(data)) {
-    data <- suppressWarnings(get.hist.quote(instrument = row, start = "2003-01-01", end = "2008-01-01", quote = "Close", provider = "yahoo", drop = TRUE))
+    data <- suppressWarnings(get.hist.quote(instrument = row, start = "2013-01-01", end = "2018-01-01", quote = "Close", provider = "yahoo", drop = TRUE))
   }
   else {
-    temp <- suppressWarnings(get.hist.quote(instrument = row, start = "2003-01-01", end = "2008-01-01", quote = "Close", provider = "yahoo", drop = TRUE))
+    temp <- suppressWarnings(get.hist.quote(instrument = row, start = "2013-01-01", end = "2018-01-01", quote = "Close", provider = "yahoo", drop = TRUE))
     data <- cbind(data, temp)
   }
 }
 cMatrix <- as.matrix(data)
 ```
 
-After downloading the data in <b>cMatrix</b> we have to assign the names to columns and we have to remove the na values and infinite values. We are replacing them with 0 instead of removing the whole row. For getting required <b> X </b> matrix we also have to use <i>diff</i> and <i>log</i>  formula on our matrix. I will be outputing its first few rows and columns using kable function. 
+After downloading the data in <b>cMatrix</b> we have to assign the names to columns and we have to remove the <b>na</b> values and <b>infinite</b> values. We are replacing them with 0 instead of removing the whole row. For getting required <b> X </b> matrix we also have to use <i>diff</i> and <i>log</i>  formula on our matrix. I will be outputing its first few rows and columns using kable function. 
 
 ```{r}
 cMatrix <- as.matrix(data)
@@ -61,7 +61,7 @@ logMatrix[is.infinite(logMatrix)] <- 0
 knitr::kable(head(logMatrix[,1:20],6), format="markdown")
 ```
 
-After that I will plot <b>logMatrix</b> which will be required X matrix. 
+After that we plotted <b>logMatrix</b> which will be our required X matrix. 
 ```{r}
 plot(logMatrix)
 ```
@@ -112,12 +112,12 @@ From above you can see that values graph changes between 0 to 1. Now I have <b>F
 
 ```{r}
 confidence <- as.numeric(quantile(brep,0.95)/sqrt(nrow(logMatrix)))
-plot(confidence)
+confidence
 ```
 
-From above you can notice that its value is 0.18. Lets move to building P􏰂R[j,k]∈Cj,k(α) for all (j,k)􏰃 →n 1−α for this I need build new metrix based on this condition <b>"If we have a confidence interval Cn,α then we can put an edge whenever [−ε, +ε] ∩ Cn,α = ∅." </b>
+From above you can notice that its value is 0.18. Lets move to building P􏰂R[j,k]∈Cj,k(α) for all (j,k)􏰃 →n 1−α for this We needed to build new metrix based on this condition <b>"If we have a confidence interval Cn,α then we can put an edge whenever [−ε, +ε] ∩ Cn,α = ∅." </b>
 
-I am going to a function which will create matrix for edges if based on our confidence interval and error as <b> ee = 0.1</b> 
+We wrote function which will create matrix for edges which is based on our confidence interval and error as <b> ee = 0.1</b> 
 
 ```{r}
 matrix_apply <- function(m,ee,con) {
@@ -147,10 +147,7 @@ knitr::kable(head(m[,1:10],6), format="markdown")
 From above we have 1 in the matrix when edge is possible and 0 otherwise. Moving to creating a graph from adjacency matrix as <b>m </b> and simplify it if there are some stocks which points to itself. But before doing I need a function which will color the stocks which has same <b> GICS </b>. 
 
 ```{r}
-color_graph <- function(graph,stocks){
-  sectors <- unique(stocks$GICSSector) # getting GICS 
-  colors <- rainbow(length(sectors)) # getting colors based on GICS 
-
+color_graph <- function(graph,stocks,sectors,colors){
   for(i in 1:nrow(stocks)) {
     row <- stocks[i,]
     
@@ -168,28 +165,37 @@ color_graph <- function(graph,stocks){
 
 Lets plot the graph after using above function for coloring. 
 ```{r}
-ee<- 0.13
-m<- matrix_apply(R,ee,confidence)
+library(randomcoloR)
+ee <- 0.13
+sectors <- unique(stock$GICSSector) # getting GICS 
+colors <- distinctColorPalette(length(sectors))  # getting colors based on GICS 
+m <- matrix_apply(R,ee,confidence)
 g<-simplify(graph_from_adjacency_matrix(m,diag = FALSE,mode = "undirected"))
-plot(color_graph(g,stock))
+plot(color_graph(g,stock,sectors,colors))
+legend("bottomleft", legend= sectors  , col = colors , bty = "n", pch=20 , pt.cex = 0.7, cex = 0.35, text.col=colors , horiz = FALSE, inset = c(0.1, 0.1))
 ```
 
 
-From above you can see that with error 0.13 we get the perfect result of what we have wanted to support our claim that <b style="color:red">"stocks from the same sector cluster together"</b>. To support this claim I have drawn the graph containing unique color for stocks that are in the same <b>GICS</b>
+From above you can see that with error 0.13 we get the perfect result of what we have wanted to support our claim that <b style="color:red">"stocks from the same sector cluster together"</b>. To support this claim we have drawn the graph containing unique color for stocks that are in the same <b>GICS</b>
 
 
 We will going to run this with different error values to see what will happen to our stocks when we increase error value <b>ee</b>
 
 
 ```{r}
-ee<- 0.02
-for( i in 1:20){
+eeee<- 0.1
+for( i in 1:10){
 ee <-ee + 0.02
 m<- matrix_apply(R,ee,confidence)
 g<-simplify(graph_from_adjacency_matrix(m,diag = FALSE,mode = "undirected"))
-plot(color_graph(g,stock), main=c("Error value as ",ee))
+title = paste("Error: ",ee," and Confidence Level: ",round(0.95,2),sep = "")
+plot(color_graph(g,stock,sectors,colors) ,main="")
+title(main =title,  line = 0.5, cex.main = 0.4)
+legend("bottomleft", legend= sectors  , col = colors , bty = "n", pch=20 , pt.cex = 0.7, cex = 0.35, text.col=colors , horiz = FALSE, inset = c(0.1, 0.1))
 }
 ```
 
-From above you can see that our confidence value wa around 0.18 initailly and as we increase our error value from 0.02 to 0.42 stocks from same GICS started spreading instead of merging on same clustor. But still you can see that stocks from same GICS always clustered togethor.  
+From above you can see that our confidence value wa 0.18  and as we increase our error value from 0.02 to 0.42 stocks from same GICS started spreading instead of merging on same clustor. But still you can see that stocks from same GICS always clustered togather this proves our hypothesis. 
+
+
 
