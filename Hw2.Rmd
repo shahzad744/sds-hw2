@@ -192,6 +192,7 @@ g<-simplify(graph_from_adjacency_matrix(m,diag = FALSE,mode = "undirected"))
 title = paste("Error: ",ee," and Confidence Level: ",round(0.95,2),sep = "")
 plot(color_graph(g,stock,sectors,colors) ,main="")
 title(main =title,  line = 0.5, cex.main = 0.4)
+legend("bottomleft", legend= sectors  , col = colors , bty = "n", pch=20 , pt.cex = 0.7, cex = 0.35, text.col=colors , horiz = FALSE, inset = c(0.1, 0.1))
 }
 ```
 
@@ -297,6 +298,7 @@ m <- matrix_apply_alpha(cor_mat,alpha)
 g<-simplify(graph_from_adjacency_matrix(m,diag = FALSE,mode = "undirected"))
 plot(color_graph(g,stock,sectors,colors) ,main="")
 title(main ="Marginal Correlation Graph",  line = 0.5, cex.main = 0.4)
+legend("bottomleft", legend= sectors  , col = colors , bty = "n", pch=20 , pt.cex = 0.7, cex = 0.35, text.col=colors , horiz = FALSE, inset = c(0.1, 0.1))
 ```
 
 Finally, we have all the things we need. Lets move to point 5. 
@@ -477,6 +479,8 @@ We will going to run this with different error values to see what will happen to
 
 ```{r}
 eeee<- 0.1
+sectors <- unique(stock$GICSSector) # getting GICS 
+colors <- distinctColorPalette(length(sectors))  # getting colors based on GICS 
 for( i in 1:10){
 ee <-ee + 0.02
 m<- matrix_apply(R,ee,confidence)
@@ -484,6 +488,7 @@ g<-simplify(graph_from_adjacency_matrix(m,diag = FALSE,mode = "undirected"))
 title = paste("Error: ",ee," and Confidence Level: ",round(0.95,2),sep = "")
 plot(color_graph(g,stock,sectors,colors) ,main="")
 title(main =title,  line = 0.5, cex.main = 0.4)
+legend("bottomleft", legend= sectors  , col = colors , bty = "n", pch=20 , pt.cex = 0.7, cex = 0.35, text.col=colors , horiz = FALSE, inset = c(0.1, 0.1))
 }
 ```
 
@@ -545,7 +550,7 @@ for(i in seq(nrow(cor_mat))){
 After above code will run we will have cor_mat which contains our desired values. But it takes around 2 hours to run. So we have already saved it to <b>Q2Final.RData</b> file which has already that matrix. 
 
 ```{r}
-load("Q2Final.RData")
+load("Q2Final2.RData")
 ```
 
 For plotting we need again the matrix_apply function for getting edges for following this condition on matrix each value "if and only if we reject the null hypothesis that γ2 = 0.". So 
@@ -590,12 +595,15 @@ m <- matrix_apply_alpha(cor_mat,alpha)
 g<-simplify(graph_from_adjacency_matrix(m,diag = FALSE,mode = "undirected"))
 plot(color_graph(g,stock,sectors,colors) ,main="")
 title(main ="Marginal Correlation Graph",  line = 0.5, cex.main = 0.4)
+legend("bottomleft", legend= sectors  , col = colors , bty = "n", pch=20 , pt.cex = 0.7, cex = 0.35, text.col=colors , horiz = FALSE, inset = c(0.1, 0.1))
+
 ```
 
 Finally, we have all the things we need. Lets move to point 5.
 
+<b>Comparison:</b> If we compare the covariance graph of 2013-2018 and 2003-2008 one can clearly see that distant covariance gets between 2013-2018. 
 
-```{r, include=FALSE}
-save.image("Q2Final.RData")
-```
+###### Conclusion: Stocks from same GICS tends to clustored togather. 
+
+Note: Every file or RData we have used are in <a href="https://github.com/shahzad744/sds-hw2">this github Repo</a> 
 
